@@ -1,0 +1,619 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>FEA_Program</title><meta name="generator" content="MATLAB 8.1"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2016-12-08"><meta name="DC.source" content="FEA_Program.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, tt, code { font-size:12px; }
+pre { margin:0px 0px 20px; }
+pre.error { color:red; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><pre class="codeinput"><span class="comment">% Linear Finite Element Program for 2-D Elasticity</span>
+<span class="comment">%</span>
+<span class="comment">% Copyright (C) Arif Masud and Tim Truster</span>
+<span class="comment">%</span>
+<span class="comment">% This program computes a numerical solution to a finite element model</span>
+<span class="comment">% using input on the geometry and physical properties of a mesh, and on the</span>
+<span class="comment">% boundary conditions and applied loads. The routine assembles element</span>
+<span class="comment">% quantities into the stiffness matrix and force vector to create a system</span>
+<span class="comment">% of equations which is then solved for the nodal values of the</span>
+<span class="comment">% displacement field. Boundary conditions are applied to constrain the</span>
+<span class="comment">% stiffness matrix and to augment the force vector. The output is a list of</span>
+<span class="comment">% the displacements printed on screen, contour plots of the displacement</span>
+<span class="comment">% fields, and a plot of the deformed configuration of the mesh.</span>
+<span class="comment">%</span>
+<span class="comment">% Mesh input should be uploaded by running an input .m file before</span>
+<span class="comment">% executing this program.</span>
+<span class="comment">%</span>
+<span class="comment">% Format of required input:</span>
+<span class="comment">%</span>
+<span class="comment">%   numnp:           = number of nodes in the mesh (length(NodeTable))</span>
+<span class="comment">%</span>
+<span class="comment">%   numel:           = number of elements in the mesh</span>
+<span class="comment">%</span>
+<span class="comment">%   nen:             = maximum number of nodes per element (4)</span>
+<span class="comment">%</span>
+<span class="comment">%   PSPS:            = flag for plane stress ('s') or plane strain ('n')</span>
+<span class="comment">%</span>
+<span class="comment">%   NodeTable:       = table of mesh nodal coordinates defining the</span>
+<span class="comment">%                      geometry of the mesh; format of the table is as</span>
+<span class="comment">%                      follows:</span>
+<span class="comment">%                          Nodes  |             x-coord  y-coord</span>
+<span class="comment">%                          n1     |  NodeTable = [x1     y1</span>
+<span class="comment">%                          n2     |               x2     y2</span>
+<span class="comment">%                          ...    |               ..     ..</span>
+<span class="comment">%                          nnumnp |               xnumnp ynumnp];</span>
+<span class="comment">%</span>
+<span class="comment">%   ix:              = table of mesh connectivity information, specifying</span>
+<span class="comment">%                      how nodes are attached to elements and how materials</span>
+<span class="comment">%                      are assigned to elements; entries in the first nen</span>
+<span class="comment">%                      columns correspond to the rows of NodeTable</span>
+<span class="comment">%                      representing the nodes attached to element e;</span>
+<span class="comment">%                      entries in the last nen+1 column are rows from MateT</span>
+<span class="comment">%                      signifying the material properties assigned to</span>
+<span class="comment">%                      element e; format of the table is as follows:</span>
+<span class="comment">%                          Elements  |         n1    n2    n3    n4   mat</span>
+<span class="comment">%                          e1        |  ix = [e1n1  e1n2  e1n3  e1n4 e1mat</span>
+<span class="comment">%                          e2        |        e2n1  e2n2  e2n3  e2n4 e2mat</span>
+<span class="comment">%                          ...       |         ..    ..    ..    ..   ..</span>
+<span class="comment">%                          enumel    |        values for element numel   ];</span>
+<span class="comment">%</span>
+<span class="comment">%   MateT:           = table of mesh material properties for each distinct</span>
+<span class="comment">%                      set of material properties; these sets are</span>
+<span class="comment">%                      referenced by element e by setting the value of</span>
+<span class="comment">%                      ix(e,nen+1) to the row number of the desired</span>
+<span class="comment">%                      material set; format of the table is as follows:</span>
+<span class="comment">%                          Materials  |           E   v   t</span>
+<span class="comment">%                          mat1       |  MateT = [E1  v1  t1</span>
+<span class="comment">%                          mat2       |           E2  v2  t2</span>
+<span class="comment">%                          ...        |           ..  ..  ..];</span>
+<span class="comment">%</span>
+<span class="comment">%   BCLIndex:        = list of the number of boundary conditions and loads</span>
+<span class="comment">%                      applied to the mesh; first entry is the number of</span>
+<span class="comment">%                      prescribed displacements at nodes; second entry is</span>
+<span class="comment">%                      the number of nodal forces</span>
+<span class="comment">%</span>
+<span class="comment">%   NodeBC:          = table of prescribed nodal displacement boundary</span>
+<span class="comment">%                      conditions; it contains lists of nodes, the</span>
+<span class="comment">%                      direction of the displacement prescribed (x=1, y=2),</span>
+<span class="comment">%                      and the value of the displacement (set 0 for fixed</span>
+<span class="comment">%                      boundary); the length of the table must match the</span>
+<span class="comment">%                      entry in BCLIndex(1), otherwise an error will result</span>
+<span class="comment">%                      if too few conditions are given or extra BCs will be</span>
+<span class="comment">%                      ignored in the model input module;  format of the</span>
+<span class="comment">%                      table is as follows:</span>
+<span class="comment">%                          BCs  |            nodes direction value</span>
+<span class="comment">%                          bc1  |  NodeBC = [bc1n   bc1dir   bc1u</span>
+<span class="comment">%                          bc2  |            bc2n   bc2dir   bc2u</span>
+<span class="comment">%                          ...  |             ..     ..       .. ];</span>
+<span class="comment">%</span>
+<span class="comment">%   NodeLoad:        = table of prescribed nodal forces; it contains lists</span>
+<span class="comment">%                      of nodes, the direction of the force prescribed</span>
+<span class="comment">%                      (x=1, y=2), and the value of the force; the length</span>
+<span class="comment">%                      of the table must match the entry in BCLIndex(2),</span>
+<span class="comment">%                      otherwise an error will result if too few conditions</span>
+<span class="comment">%                      are given or extra loads will be ignored in the</span>
+<span class="comment">%                      model input module; format of the table is as</span>
+<span class="comment">%                      follows:</span>
+<span class="comment">%                          Loads  |              nodes direction value</span>
+<span class="comment">%                          P1     |  NodeLoad = [ P1n    P1dir    P1P</span>
+<span class="comment">%                          P2     |               P2n    P2dir    P2P</span>
+<span class="comment">%                          ...    |               ..     ..       .. ];</span>
+<span class="comment">%</span>
+<span class="comment">% The following numbering convention is used for 4-node quadrilateral</span>
+<span class="comment">% elements:</span>
+<span class="comment">%</span>
+<span class="comment">%           4 -------------- 3       2</span>
+<span class="comment">%           |                |       | \</span>
+<span class="comment">%           |                |       |  \</span>
+<span class="comment">%           |                |       |   \</span>
+<span class="comment">%           |                |       |    \</span>
+<span class="comment">%           |                |       |     \</span>
+<span class="comment">%           |                |       |      \</span>
+<span class="comment">%           1 -------------- 2       3-------1</span>
+<span class="comment">%</span>
+
+format <span class="string">compact</span>
+clc
+
+iel = 1;
+ndf = 2;
+ndm = 2;
+
+<span class="comment">% Interpret Boundary Conditions and assign Loads; allocate DOFS</span>
+assign_bc_load_data
+nneq = neq + nieq;
+
+d = zeros(neq,1);
+myj_def=1;
+F_ext=linspace(0,Fext_app,Steps);
+Fint=0;
+
+<span class="comment">%%%%%%%%%%%%%                          %%%%%%%%%%%%%%%%%%%%%</span>
+<span class="comment">%%%%%%%%%%%%% Modification in the Code %%%%%%%%%%%%%%%%%%%%%</span>
+<span class="comment">%%%%%%%%%%%%%                          %%%%%%%%%%%%%%%%%%%%%</span>
+
+<span class="comment">% Intialize Node Table. This quantity is updated at every iteration, but</span>
+<span class="comment">% stored at every step.</span>
+
+
+NodeDisp(:,:,1) = NodeTable;
+
+<span class="keyword">for</span> n=1:(length(F_ext)-1)
+    NodeLoad(:,3) = LoadDist*F_ext(n+1);
+
+<span class="comment">%     NodeTable = NodeTable + Node_U_V;</span>
+
+    <span class="comment">%Assemble Stiffness Routine and assign force boundary conditions</span>
+    assign_bc_load_data
+    nneq = neq + nieq;
+    R0=abs(F_ext(n+1)-norm(Fint));      <span class="comment">%initial residual</span>
+    res=R0;
+    iter=1;                             <span class="comment">%iteration counter inrement !!</span>
+
+
+    <span class="keyword">while</span>(res&gt;tol*R0)
+        isw = 3;
+        FormFE
+
+        <span class="comment">%Solve Matrix System for FE Solution</span>
+
+        SolveFE
+        d(:,myj_def+1)=d(:,myj_def) + ModelDx;
+
+        <span class="keyword">for</span> node = 1:numnp
+            <span class="keyword">for</span> dir = 1:ndf
+                gDOF = NDOFT(node, dir);
+                <span class="keyword">if</span> gDOF &lt;= neq
+                    Node_U_V(node, dir) = ModelDx(gDOF);
+                <span class="keyword">else</span>
+                    Node_U_V(node, dir) = ModelDc(gDOF - neq);
+                <span class="keyword">end</span>
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        <span class="comment">% We update the Nodal Coordinates at iteration here:</span>
+
+        NodeTable=NodeTable+Node_U_V;
+        FormFE
+
+        <span class="comment">%Residual</span>
+        res=norm(abs(Fd-Fint));
+        residual(n,iter) = res;
+
+        <span class="keyword">if</span> iter==1
+            R0=res;
+        <span class="keyword">end</span>
+
+        iter=iter+1;                          <span class="comment">%update the iteration counter</span>
+        myj_def=myj_def+1;
+    <span class="keyword">end</span>
+
+    n=n+1;
+
+    dn(:,n)=d(:,myj_def);              <span class="comment">%storing last converged displacement</span>
+    NodeDisp(:,:,n)=NodeTable;
+
+    <span class="comment">% Storing the Stress and Strain at the Intergration Point # 3</span>
+
+    Stress(n,:)=stress(4,:);  <span class="comment">% We define the Integration Point counterclockwise</span>
+    Strain(n,:)=strain(4,:);
+<span class="keyword">end</span>
+
+<span class="comment">%Output Results</span>
+
+Node_U_V = zeros(numnp,ndf);
+
+<span class="keyword">for</span> node = 1:numnp
+    <span class="keyword">for</span> dir = 1:ndf
+        gDOF = NDOFT(node, dir);
+        <span class="keyword">if</span> gDOF &lt;= neq
+            Node_U_V(node, dir) = dn(gDOF,n);
+        <span class="keyword">else</span>
+            Node_U_V(node, dir) = ModelDc(gDOF - neq);
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+Node_U_V;
+maxuvw = zeros(ndm,1);
+maxxyz = zeros(ndm,1);
+
+<span class="keyword">for</span> i = 1:ndm
+    maxuvw(i) = max(abs(Node_U_V(:,i)));
+    maxxyz(i) = max(NodeTable(:,i));
+<span class="keyword">end</span>
+
+len = sqrt(maxxyz'*maxxyz);
+perc = 5/100;
+factor = len/max(maxuvw)*perc;
+NodeTable2 = NodeTable;
+
+<span class="keyword">for</span> i = 1:ndm
+    NodeTable2(:,i) = NodeTable2(:,i) + Node_U_V(:,i)*factor;
+<span class="keyword">end</span>
+
+plotModelCont(NodeTable, Node_U_V(:,1), ix, numel, nen, 1, 1, 2, <span class="string">'Displacement Contour - u_x'</span>)
+plotModelCont(NodeTable, Node_U_V(:,2), ix, numel, nen, 1, 2, 2, <span class="string">'Displacement Contour - u_y'</span>)
+plotModel(NodeTable2, ix, numel, nen, 2, 1, 1, <span class="string">'Deformed Configuration'</span>, <span class="string">'y'</span>, <span class="string">'y'</span>)
+plotModel(NodeTable, ix, numel, nen, 2, 1, 1, <span class="string">'Un-Deformed Configuration'</span>, <span class="string">'n'</span>, <span class="string">'n'</span>)
+NodeDisp;
+
+t=linspace(0,1,Steps);
+
+figure(3)
+plot(t,Stress(:,1),<span class="string">'*'</span>,t,Stress(:,2),<span class="string">'-.'</span>,t,Stress(:,3),<span class="string">'-'</span>,<span class="string">'LineWidth'</span>,1.8)
+xl11 = xlabel(<span class="string">'Load Step (t)'</span>,<span class="string">'FontWeight'</span>,<span class="string">'bold'</span>,<span class="string">'FontSize'</span>,18);
+set(xl11,<span class="string">'Interpreter'</span>,<span class="string">'latex'</span>)
+yl11=ylabel(<span class="string">'Stress'</span>,<span class="string">'FontWeight'</span>,<span class="string">'bold'</span>,<span class="string">'FontSize'</span>,18);
+set(yl11,<span class="string">'Interpreter'</span>,<span class="string">'latex'</span>)
+legend({<span class="string">'\sigma_1_1'</span>,<span class="string">'\sigma_2_2'</span>,<span class="string">'\sigma_1_2'</span>},<span class="string">'FontWeight'</span>,<span class="string">'bold'</span>,<span class="string">'FontSize'</span>,14);
+title(<span class="string">'Stress at each load step'</span>,<span class="string">'FontWeight'</span>,<span class="string">'bold'</span>,<span class="string">'FontSize'</span>,22)
+grid <span class="string">on</span>
+
+figure(4)
+plot(Strain(:,1),Stress(:,1),<span class="string">'-'</span>,Strain(:,2),Stress(:,2),<span class="string">'-'</span>,Strain(:,3),Stress(:,3),<span class="string">'-.'</span>,<span class="string">'LineWidth'</span>,1.8)
+xl2 = xlabel(<span class="string">'Strain'</span>,<span class="string">'FontWeight'</span>,<span class="string">'bold'</span>,<span class="string">'FontSize'</span>,22);
+set(xl2,<span class="string">'Interpreter'</span>,<span class="string">'latex'</span>)
+yl2 = ylabel(<span class="string">'Stress'</span>,<span class="string">'FontWeight'</span>,<span class="string">'bold'</span>,<span class="string">'FontSize'</span>,22);
+set(yl2,<span class="string">'Interpreter'</span>,<span class="string">'latex'</span>)
+legend(<span class="string">'\sigma_1_1'</span>,<span class="string">'\sigma_2_2'</span>,<span class="string">'\sigma_1_2'</span>)
+grid <span class="string">on</span>
+
+figure(5)
+plot(t,dn(1,:),<span class="string">'--'</span>,t,dn(2,:),<span class="string">'LineWidth'</span>,1.75)
+xlabel(<span class="string">'Load Step (t)'</span>,<span class="string">'FontWeight'</span>,<span class="string">'bold'</span>,<span class="string">'FontSize'</span>,22)
+ylabel(<span class="string">'Displacement (d)'</span>,<span class="string">'FontWeight'</span>,<span class="string">'bold'</span>,<span class="string">'FontSize'</span>,22)
+legend(<span class="string">'d_1'</span>,<span class="string">'d_2'</span>)
+grid <span class="string">on</span>
+
+
+<span class="comment">% figure(6)</span>
+<span class="comment">% %For 4a</span>
+<span class="comment">% plot(Strain(:,2),Stress(:,1),'-',Strain(:,2),Stress(:,2),'-',Strain(:,2),Stress(:,3),'-.','LineWidth',1.8)</span>
+<span class="comment">% xlabel('Strain')</span>
+<span class="comment">% ylabel('Stress')</span>
+<span class="comment">% legend('\sigma_1_1','\sigma_2_2','\sigma_1_2')</span>
+<span class="comment">% grid on</span>
+
+<span class="comment">%For 4b</span>
+<span class="comment">% plot(Strain(:,3),Stress(:,1),'-',Strain(:,3),Stress(:,2),'-',Strain(:,3),Stress(:,3),'-.','LineWidth',1.75)</span>
+<span class="comment">% xlabel('Strain')</span>
+<span class="comment">% ylabel('Stress')</span>
+<span class="comment">% legend('\sigma_1_1','\sigma_2_2','\sigma_1_2')</span>
+<span class="comment">% grid on</span>
+</pre><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2013a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+% Linear Finite Element Program for 2-D Elasticity
+%
+% Copyright (C) Arif Masud and Tim Truster
+%
+% This program computes a numerical solution to a finite element model
+% using input on the geometry and physical properties of a mesh, and on the
+% boundary conditions and applied loads. The routine assembles element
+% quantities into the stiffness matrix and force vector to create a system
+% of equations which is then solved for the nodal values of the
+% displacement field. Boundary conditions are applied to constrain the
+% stiffness matrix and to augment the force vector. The output is a list of
+% the displacements printed on screen, contour plots of the displacement
+% fields, and a plot of the deformed configuration of the mesh.
+%
+% Mesh input should be uploaded by running an input .m file before
+% executing this program.
+%
+% Format of required input:
+%
+%   numnp:           = number of nodes in the mesh (length(NodeTable))
+%
+%   numel:           = number of elements in the mesh
+%
+%   nen:             = maximum number of nodes per element (4)
+%
+%   PSPS:            = flag for plane stress ('s') or plane strain ('n')
+%
+%   NodeTable:       = table of mesh nodal coordinates defining the
+%                      geometry of the mesh; format of the table is as
+%                      follows:
+%                          Nodes  |             x-coord  y-coord
+%                          n1     |  NodeTable = [x1     y1
+%                          n2     |               x2     y2
+%                          ...    |               ..     ..
+%                          nnumnp |               xnumnp ynumnp];
+%
+%   ix:              = table of mesh connectivity information, specifying
+%                      how nodes are attached to elements and how materials
+%                      are assigned to elements; entries in the first nen
+%                      columns correspond to the rows of NodeTable
+%                      representing the nodes attached to element e;
+%                      entries in the last nen+1 column are rows from MateT
+%                      signifying the material properties assigned to
+%                      element e; format of the table is as follows:
+%                          Elements  |         n1    n2    n3    n4   mat
+%                          e1        |  ix = [e1n1  e1n2  e1n3  e1n4 e1mat
+%                          e2        |        e2n1  e2n2  e2n3  e2n4 e2mat
+%                          ...       |         ..    ..    ..    ..   ..
+%                          enumel    |        values for element numel   ];
+%
+%   MateT:           = table of mesh material properties for each distinct
+%                      set of material properties; these sets are
+%                      referenced by element e by setting the value of
+%                      ix(e,nen+1) to the row number of the desired
+%                      material set; format of the table is as follows:
+%                          Materials  |           E   v   t
+%                          mat1       |  MateT = [E1  v1  t1
+%                          mat2       |           E2  v2  t2
+%                          ...        |           ..  ..  ..];
+%
+%   BCLIndex:        = list of the number of boundary conditions and loads
+%                      applied to the mesh; first entry is the number of
+%                      prescribed displacements at nodes; second entry is
+%                      the number of nodal forces
+%
+%   NodeBC:          = table of prescribed nodal displacement boundary
+%                      conditions; it contains lists of nodes, the
+%                      direction of the displacement prescribed (x=1, y=2),
+%                      and the value of the displacement (set 0 for fixed
+%                      boundary); the length of the table must match the
+%                      entry in BCLIndex(1), otherwise an error will result
+%                      if too few conditions are given or extra BCs will be
+%                      ignored in the model input module;  format of the
+%                      table is as follows:
+%                          BCs  |            nodes direction value
+%                          bc1  |  NodeBC = [bc1n   bc1dir   bc1u
+%                          bc2  |            bc2n   bc2dir   bc2u
+%                          ...  |             ..     ..       .. ];
+%
+%   NodeLoad:        = table of prescribed nodal forces; it contains lists
+%                      of nodes, the direction of the force prescribed
+%                      (x=1, y=2), and the value of the force; the length
+%                      of the table must match the entry in BCLIndex(2),
+%                      otherwise an error will result if too few conditions
+%                      are given or extra loads will be ignored in the
+%                      model input module; format of the table is as
+%                      follows:
+%                          Loads  |              nodes direction value
+%                          P1     |  NodeLoad = [ P1n    P1dir    P1P
+%                          P2     |               P2n    P2dir    P2P
+%                          ...    |               ..     ..       .. ];
+%
+% The following numbering convention is used for 4-node quadrilateral
+% elements:
+%
+%           4 REPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASH 3       2
+%           |                |       | \
+%           |                |       |  \
+%           |                |       |   \
+%           |                |       |    \
+%           |                |       |     \
+%           |                |       |      \
+%           1 REPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASH 2       3REPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASH-1
+%
+
+format compact
+clc
+
+iel = 1;
+ndf = 2;
+ndm = 2;
+
+% Interpret Boundary Conditions and assign Loads; allocate DOFS
+assign_bc_load_data
+nneq = neq + nieq;
+
+d = zeros(neq,1);
+myj_def=1;
+F_ext=linspace(0,Fext_app,Steps);
+Fint=0;
+
+%%%%%%%%%%%%%                          %%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%% Modification in the Code %%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%                          %%%%%%%%%%%%%%%%%%%%%
+
+% Intialize Node Table. This quantity is updated at every iteration, but
+% stored at every step.
+
+
+NodeDisp(:,:,1) = NodeTable;
+
+for n=1:(length(F_ext)-1)
+    NodeLoad(:,3) = LoadDist*F_ext(n+1);
+    
+%     NodeTable = NodeTable + Node_U_V;
+
+    %Assemble Stiffness Routine and assign force boundary conditions
+    assign_bc_load_data
+    nneq = neq + nieq;
+    R0=abs(F_ext(n+1)-norm(Fint));      %initial residual
+    res=R0;
+    iter=1;                             %iteration counter inrement !!
+    
+    
+    while(res>tol*R0)
+        isw = 3;
+        FormFE
+        
+        %Solve Matrix System for FE Solution
+        
+        SolveFE
+        d(:,myj_def+1)=d(:,myj_def) + ModelDx;
+        
+        for node = 1:numnp
+            for dir = 1:ndf
+                gDOF = NDOFT(node, dir);
+                if gDOF <= neq
+                    Node_U_V(node, dir) = ModelDx(gDOF);
+                else
+                    Node_U_V(node, dir) = ModelDc(gDOF - neq);
+                end
+            end
+        end
+        
+        % We update the Nodal Coordinates at iteration here:
+        
+        NodeTable=NodeTable+Node_U_V;
+        FormFE
+        
+        %Residual
+        res=norm(abs(Fd-Fint));
+        residual(n,iter) = res;
+        
+        if iter==1
+            R0=res;
+        end
+        
+        iter=iter+1;                          %update the iteration counter
+        myj_def=myj_def+1; 
+    end
+    
+    n=n+1;
+    
+    dn(:,n)=d(:,myj_def);              %storing last converged displacement
+    NodeDisp(:,:,n)=NodeTable;
+    
+    % Storing the Stress and Strain at the Intergration Point # 3
+    
+    Stress(n,:)=stress(4,:);  % We define the Integration Point counterclockwise
+    Strain(n,:)=strain(4,:);
+end
+
+%Output Results
+
+Node_U_V = zeros(numnp,ndf);
+
+for node = 1:numnp
+    for dir = 1:ndf
+        gDOF = NDOFT(node, dir);
+        if gDOF <= neq
+            Node_U_V(node, dir) = dn(gDOF,n);
+        else
+            Node_U_V(node, dir) = ModelDc(gDOF - neq);
+        end
+    end
+end
+
+Node_U_V;
+maxuvw = zeros(ndm,1);
+maxxyz = zeros(ndm,1);
+
+for i = 1:ndm
+    maxuvw(i) = max(abs(Node_U_V(:,i)));
+    maxxyz(i) = max(NodeTable(:,i));
+end
+
+len = sqrt(maxxyz'*maxxyz);
+perc = 5/100;
+factor = len/max(maxuvw)*perc;
+NodeTable2 = NodeTable;
+
+for i = 1:ndm
+    NodeTable2(:,i) = NodeTable2(:,i) + Node_U_V(:,i)*factor;
+end
+
+plotModelCont(NodeTable, Node_U_V(:,1), ix, numel, nen, 1, 1, 2, 'Displacement Contour - u_x')
+plotModelCont(NodeTable, Node_U_V(:,2), ix, numel, nen, 1, 2, 2, 'Displacement Contour - u_y')
+plotModel(NodeTable2, ix, numel, nen, 2, 1, 1, 'Deformed Configuration', 'y', 'y')
+plotModel(NodeTable, ix, numel, nen, 2, 1, 1, 'Un-Deformed Configuration', 'n', 'n')
+NodeDisp;
+
+t=linspace(0,1,Steps);
+
+figure(3)
+plot(t,Stress(:,1),'*',t,Stress(:,2),'-.',t,Stress(:,3),'-','LineWidth',1.8)
+xl11 = xlabel('Load Step (t)','FontWeight','bold','FontSize',18);
+set(xl11,'Interpreter','latex')
+yl11=ylabel('Stress','FontWeight','bold','FontSize',18);
+set(yl11,'Interpreter','latex')
+legend({'\sigma_1_1','\sigma_2_2','\sigma_1_2'},'FontWeight','bold','FontSize',14);
+title('Stress at each load step','FontWeight','bold','FontSize',22)
+grid on
+
+figure(4)
+plot(Strain(:,1),Stress(:,1),'-',Strain(:,2),Stress(:,2),'-',Strain(:,3),Stress(:,3),'-.','LineWidth',1.8)
+xl2 = xlabel('Strain','FontWeight','bold','FontSize',22);
+set(xl2,'Interpreter','latex')
+yl2 = ylabel('Stress','FontWeight','bold','FontSize',22);
+set(yl2,'Interpreter','latex')
+legend('\sigma_1_1','\sigma_2_2','\sigma_1_2')
+grid on
+
+figure(5)
+plot(t,dn(1,:),'REPLACE_WITH_DASH_DASH',t,dn(2,:),'LineWidth',1.75)
+xlabel('Load Step (t)','FontWeight','bold','FontSize',22)
+ylabel('Displacement (d)','FontWeight','bold','FontSize',22)
+legend('d_1','d_2')
+grid on
+
+
+% figure(6)
+% %For 4a
+% plot(Strain(:,2),Stress(:,1),'-',Strain(:,2),Stress(:,2),'-',Strain(:,2),Stress(:,3),'-.','LineWidth',1.8)
+% xlabel('Strain')
+% ylabel('Stress')
+% legend('\sigma_1_1','\sigma_2_2','\sigma_1_2')
+% grid on
+
+%For 4b
+% plot(Strain(:,3),Stress(:,1),'-',Strain(:,3),Stress(:,2),'-',Strain(:,3),Stress(:,3),'-.','LineWidth',1.75)
+% xlabel('Strain')
+% ylabel('Stress')
+% legend('\sigma_1_1','\sigma_2_2','\sigma_1_2')
+% grid on
+##### SOURCE END #####
+--></body></html>
